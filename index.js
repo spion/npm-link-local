@@ -28,6 +28,7 @@ function linkToNodeModules(modulePath, relative) {
 
 	var link = path.resolve(process.cwd(), node_modules, moduleName);
 
+  var dotBin = path.resolve(process.cwd(), node_modules, '.bin')
 
 	//try to create node_modules
 	try {
@@ -41,9 +42,19 @@ function linkToNodeModules(modulePath, relative) {
 		target = relativizePath(target, link);
 	}
 
-	console.log(target, '->', link);
+	console.log(link, '->', target);
+  fs.symlinkSync(target, link, 'junction');
 
-	return fs.symlinkSync(target, link, 'junction');
+  let pkgJson = JSON.parse(fs.readFileSync(path.resolve('node_modules', moduleName, 'package.json'), 'utf8'))
+  if (pkgJson.bin) {
+    Object.keys(pkgJson.bin).forEach(bin => {
+      var newLink = path.join(dotBin, bin)
+      var newTarget = path.join('..', moduleName, pkgJson.bin[bin])
+      console.log(newLink, '->', newTarget)
+      rimraf.sync(newLink)
+      fs.symlinkSync(newTarget, newLink, 'junction')
+    })
+  }
 };
 
 function relativizePath(target, link) {
